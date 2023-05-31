@@ -1,0 +1,56 @@
+//Setting area of interest
+var geometry = /* color: #98ff00 */ee.Geometry.Polygon(
+        [[[-74.86549908448666, 11.029469321629943],
+          [-74.83357006837338, 11.028458376262709],
+          [-74.82258374024838, 11.039747068789996],
+          [-74.84404141236752, 11.065524097360033],
+          [-74.87768704225033, 11.044127638601013]]]);
+//Loading Landsat 8 data for our location
+var l8 = ee.ImageCollection('LANDSAT/LC08/C02/T1_TOA')
+  .filterDate('2013', '2023')
+  .filter(ee.Filter.eq('WRS_PATH', 9))
+  .filter(ee.Filter.eq('WRS_ROW', 52));
+  //.filterMetadata('CLOUD_COVER','less_than',50);
+//Creating function to map NDVI over an image collection
+var funNDVI = function(image) {
+  var ndvi = image.normalizedDifference(['B5', 'B4']).rename('NDVI');
+  return ndvi;
+};
+//Retrieving data for a given year
+var year = 2022;
+var date1 = ee.Date.fromYMD(year,1,1);
+var date2 = ee.Date.fromYMD(year,6,30);
+var im_Semester1 = l8.filterDate(date1, date2);
+ //Applying NDVI to the image collection
+var NDVI_Semester1 = im_Semester1.map(funNDVI);
+ //Averaging
+ var NDVI_Av_Semester1 = NDVI_Semester1.mean();
+ var im_Semester1_av = im_Semester1.mean();
+var date3 = ee.Date.fromYMD(year,7,1);
+var date4 = ee.Date.fromYMD(year,12,31);
+var im_Semester2 = l8.filterDate(date3, date4);
+//Applying NDVI to the image collection
+var NDVI_Semester2 = im_Semester2.map(funNDVI);
+//Averaging
+ var NDVI_Av_Semester2 = NDVI_Semester2.mean();
+ var im_Semester2_av = im_Semester2.mean();
+//Clipping images to narrow them down to our area of interest
+var NDVI_Av_Semester1 = NDVI_Av_Semester1.clip(geometry);
+var NDVI_Av_Semester2 = NDVI_Av_Semester2.clip(geometry);
+//Drawing on the map
+Map.centerObject(im_Semester2, 9);
+var ndviParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']};
+Map.addLayer(NDVI_Av_Semester2, ndviParams, 'NDVI image');
+//Exporting images
+Export.image.toDrive({
+  image: NDVI_Av_Semester1,
+  description: 'NDVI_2022-I',
+  scale: 20,
+  maxPixels: 10000000000000
+});
+Export.image.toDrive({
+  image: NDVI_Av_Semester2,
+  description: 'NDVI_2022-II',
+  scale: 20,
+  maxPixels: 10000000000000
+});
